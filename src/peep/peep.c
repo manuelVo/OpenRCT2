@@ -8387,9 +8387,12 @@ static int banner_clear_path_edges(rct_map_element *mapElement, int edges)
 /**
  * Gets the connected edges of a path that are permitted (i.e. no 'no entry' signs)
  */
-static int path_get_permitted_edges(rct_map_element *mapElement)
+static int path_get_permitted_edges(sint16 x, sint16 y, sint8 z, rct_map_element *mapElement)
 {
-	return banner_clear_path_edges(mapElement, mapElement->properties.path.edges) & 0x0F;
+	int edges = mapElement->properties.path.edges;
+	edges = banner_clear_path_edges(mapElement, edges);
+	edges = footpath_clear_provisional_edges(x, y, z, mapElement, edges);
+	return edges & 0x0F;
 }
 
 static bool is_valid_path_z_and_direction(rct_map_element *mapElement, int currentZ, int currentDirection)
@@ -8514,7 +8517,7 @@ static uint8 footpath_element_dest_in_dir(
 			if (!is_valid_path_z_and_direction(mapElement, z, chosenDirection)) continue;
 			if (footpath_element_is_wide(mapElement)) return PATH_SEARCH_WIDE;
 
-			uint8 edges = path_get_permitted_edges(mapElement);
+			uint8 edges = path_get_permitted_edges(x, y, z, mapElement);
 			edges &= ~(1 << (chosenDirection ^ 2));
 			z = mapElement->base_height;
 
@@ -8754,7 +8757,7 @@ static uint16 peep_pathfind_heuristic_search(sint16 x, sint16 y, uint8 z, uint8 
 	}
 
 	/* Get all the permitted_edges of the next tile */
-	uint8 edges = path_get_permitted_edges(path);
+	uint8 edges = path_get_permitted_edges(x, y, z, path);
 	z = path->base_height;
 
 	#if defined(DEBUG_LEVEL_2) && DEBUG_LEVEL_2
@@ -8804,7 +8807,7 @@ static uint16 peep_pathfind_heuristic_search(sint16 x, sint16 y, uint8 z, uint8 
 	 * the search limit _peepPathFindNumJunctions ; junctions that are not
 	 * 'thin' per the above definition are treated like a path segment with
 	 * respect to the search limits. */
-	uint8 prescan_edges = path_get_permitted_edges(path);
+	uint8 prescan_edges = path_get_permitted_edges(x, y, z, path);
 	int prescan_edge = bitscanforward(prescan_edges);
 	bool thin_junction = false;
 	int thin_count = 0;
@@ -8966,7 +8969,7 @@ int peep_pathfind_choose_direction(sint16 x, sint16 y, uint8 z, rct_peep *peep)
 	if (!found) return -1;
 
 	// Remove any edges that are not permitted
-	edges &= path_get_permitted_edges(dest_map_element);
+	edges &= path_get_permitted_edges(x, y, z, dest_map_element);
 
 	// Peep has tried all edges.
 	if (edges == 0) return -1;
@@ -9343,12 +9346,10 @@ static int guest_path_finding(rct_peep* peep)
 	}
 
 	_peepPathFindIsStaff = false;
-	uint8 edges = path_get_permitted_edges(mapElement);
-
+	uint8 edges = path_get_permitted_edges(x, y, z, mapElement);
 	if (edges == 0) {
 		return guest_surface_path_finding(peep);
 	}
-
 	if (peep->outside_of_park == 0 && peep_heading_for_ride_or_park_exit(peep)) {
 		/* If this mapElement is adjacent to any non-wide paths,
 		 * remove all of the edges to wide paths. */
