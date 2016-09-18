@@ -1134,6 +1134,9 @@ static void loc_6A6D7E(
 	int initialX, int initialY, int z, int direction, rct_map_element *initialMapElement,
 	int flags, bool query, rct_neighbour_list *neighbourList
 ) {
+	if (initialMapElement->flags & MAP_ELEMENT_FLAG_GHOST) {
+		return;
+	}
 	int x = initialX + TileDirectionDelta[direction].x;
 	int y = initialY + TileDirectionDelta[direction].y;
 	if (((gScreenFlags & SCREEN_FLAGS_SCENARIO_EDITOR) || gCheatsSandboxMode) && map_is_edge(x, y)) {
@@ -1145,6 +1148,9 @@ static void loc_6A6D7E(
 		do {
 			switch (map_element_get_type(mapElement)) {
 			case MAP_ELEMENT_TYPE_PATH:
+				if (mapElement->flags & MAP_ELEMENT_FLAG_GHOST) {
+					continue;
+				}
 				if (z == mapElement->base_height) {
 					if (footpath_element_is_sloped(mapElement) && footpath_element_get_slope_direction(mapElement) != direction) {
 						return;
