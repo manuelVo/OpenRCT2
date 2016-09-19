@@ -1810,23 +1810,41 @@ void footpath_update_path_wide_flags(int x, int y)
 		// Spanned from 0x00F3EFA8 to 0x00F3EFC7 (8 elements) in the original
 		rct_map_element *pathList[8];
 
+		uint8 edgeList[8];
+
 		x -= 0x20;
 		y -= 0x20;
 		pathList[0] = footpath_can_be_wide(x, y, height);
+		if (pathList[0] != NULL)
+			edgeList[0] = footpath_clear_provisional_edges(x, y, height, pathList[0], pathList[0]->properties.path.edges);
 		y += 0x20;
 		pathList[1] = footpath_can_be_wide(x, y, height);
+		if (pathList[1] != NULL)
+			edgeList[1] = footpath_clear_provisional_edges(x, y, height, pathList[1], pathList[1]->properties.path.edges);
 		y += 0x20;
 		pathList[2] = footpath_can_be_wide(x, y, height);
+		if (pathList[2] != NULL)
+			edgeList[2] = footpath_clear_provisional_edges(x, y, height, pathList[2], pathList[2]->properties.path.edges);
 		x += 0x20;
 		pathList[3] = footpath_can_be_wide(x, y, height);
+		if (pathList[3] != NULL)
+			edgeList[3] = footpath_clear_provisional_edges(x, y, height, pathList[3], pathList[3]->properties.path.edges);
 		x += 0x20;
 		pathList[4] = footpath_can_be_wide(x, y, height);
+		if (pathList[4] != NULL)
+			edgeList[4] = footpath_clear_provisional_edges(x, y, height, pathList[4], pathList[4]->properties.path.edges);
 		y -= 0x20;
 		pathList[5] = footpath_can_be_wide(x, y, height);
+		if (pathList[5] != NULL)
+			edgeList[5] = footpath_clear_provisional_edges(x, y, height, pathList[5], pathList[5]->properties.path.edges);
 		y -= 0x20;
 		pathList[6] = footpath_can_be_wide(x, y, height);
+		if (pathList[6] != NULL)
+			edgeList[6] = footpath_clear_provisional_edges(x, y, height, pathList[6], pathList[6]->properties.path.edges);
 		x -= 0x20;
 		pathList[7] = footpath_can_be_wide(x, y, height);
+		if (pathList[7] != NULL)
+			edgeList[7] = footpath_clear_provisional_edges(x, y, height, pathList[7], pathList[7]->properties.path.edges);
 		y += 0x20;
 
 		uint8 F3EFA5 = 0;
@@ -1869,14 +1887,14 @@ void footpath_update_path_wide_flags(int x, int y)
 		if ((F3EFA5 & 0x80) && (pathList[7] != NULL) && !(footpath_element_is_wide(pathList[7]))) {
 			if ((F3EFA5 & 2) &&
 				(pathList[0] != NULL) && (!footpath_element_is_wide(pathList[0])) &&
-				((pathList[0]->properties.path.edges & 6) == 6) && // N E
+				((edgeList[0] & 6) == 6) && // N E
 				(pathList[1] != NULL) && (!footpath_element_is_wide(pathList[1]))) {
 				F3EFA5 |= 0x1;
 			}
 
 			if ((F3EFA5 & 0x20) &&
 				(pathList[6] != NULL) && (!footpath_element_is_wide(pathList[6])) &&
-				((pathList[6]->properties.path.edges & 3) == 3) && // N W
+				((edgeList[6] & 3) == 3) && // N W
 				(pathList[5] != NULL) && (!footpath_element_is_wide(pathList[5]))) {
 				F3EFA5 |= 0x40;
 			}
@@ -1886,14 +1904,14 @@ void footpath_update_path_wide_flags(int x, int y)
 		if ((F3EFA5 & 0x8) && (pathList[3] != NULL) && !(pathList[3]->type & 2)) {
 			if ((F3EFA5 & 2) &&
 				(pathList[2] != NULL) && (!footpath_element_is_wide(pathList[2])) &&
-				((pathList[2]->properties.path.edges & 0xC) == 0xC) &&
+				((edgeList[2] & 0xC) == 0xC) &&
 				(pathList[1] != NULL) && (!footpath_element_is_wide(pathList[1]))) {
 				F3EFA5 |= 0x4;
 			}
 
 			if ((F3EFA5 & 0x20) &&
 				(pathList[4] != NULL) && (!footpath_element_is_wide(pathList[4])) &&
-				((pathList[4]->properties.path.edges & 9) == 9) &&
+				((edgeList[4] & 9) == 9) &&
 				(pathList[5] != NULL) && (!footpath_element_is_wide(pathList[5]))) {
 				F3EFA5 |= 0x10;
 			}
