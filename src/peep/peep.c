@@ -8384,24 +8384,6 @@ static int banner_clear_path_edges(rct_map_element *mapElement, int edges)
 	return edges;
 }
 
-static int path_clear_provisional_edges(sint16 x, sint16 y, sint8 z, rct_map_element *mapElement, int edges)
-{
-	if (gFootpathProvisionalFlags != 0)
-	{
-		for (int direction = 0;direction < 4;direction++)
-		{
-			sint16 neighbour_x = x + TileDirectionDelta[direction].x;
-			sint16 neighbour_y = y + TileDirectionDelta[direction].y;
-			if (neighbour_x == gFootpathProvisionalPosition.x && neighbour_y == gFootpathProvisionalPosition.y)
-			{
-				edges &= ~(1 << direction); // Turn off one bit in edges
-				break;
-			}
-		}
-	}
-	return edges;
-}
-
 /**
  * Gets the connected edges of a path that are permitted (i.e. no 'no entry' signs)
  */
@@ -8409,7 +8391,7 @@ static int path_get_permitted_edges(sint16 x, sint16 y, sint8 z, rct_map_element
 {
 	int edges = mapElement->properties.path.edges;
 	edges = banner_clear_path_edges(mapElement, edges);
-	edges = path_clear_provisional_edges(x, y, z, mapElement, edges);
+	edges = footpath_clear_provisional_edges(x, y, z, mapElement, edges);
 	return edges & 0x0F;
 }
 

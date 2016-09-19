@@ -666,6 +666,27 @@ void footpath_provisional_update()
 }
 
 /**
+ * Removes all edges from a edge list that lead to an provisional footpath
+ */
+int footpath_clear_provisional_edges(sint16 x, sint16 y, sint8 z, rct_map_element *path, int edges)
+{
+	if (gFootpathProvisionalFlags != 0)
+	{
+		for (int direction = 0;direction < 4;direction++)
+		{
+			sint16 neighbour_x = x + TileDirectionDelta[direction].x;
+			sint16 neighbour_y = y + TileDirectionDelta[direction].y;
+			if (neighbour_x == gFootpathProvisionalPosition.x && neighbour_y == gFootpathProvisionalPosition.y)
+			{
+				edges &= ~(1 << direction); // Turn off one bit in edges
+				break;
+			}
+		}
+	}
+	return edges;
+}
+
+/**
  * Determines the location of the footpath at which we point with the cursor. If no footpath is underneath the cursor,
  * then return the location of the ground tile. Besides the location it also computes the direction of the yellow arrow
  * when we are going to build a footpath bridge/tunnel.
@@ -1724,6 +1745,8 @@ static rct_map_element* footpath_can_be_wide(int x, int y, uint8 height)
 	do {
 		if (map_element_get_type(mapElement) != MAP_ELEMENT_TYPE_PATH)
 			continue;
+		if (mapElement->flags & MAP_ELEMENT_FLAG_GHOST)
+			continue;
 		if (height != mapElement->base_height)
 			continue;
 		if (footpath_element_is_queue(mapElement))
@@ -1766,16 +1789,22 @@ void footpath_update_path_wide_flags(int x, int y)
 		if (map_element_get_type(mapElement) != MAP_ELEMENT_TYPE_PATH)
 			continue;
 
+		if (mapElement->flags & MAP_ELEMENT_FLAG_GHOST)
+			continue;
+
 		if (footpath_element_is_queue(mapElement))
 			continue;
 
 		if (footpath_element_is_sloped(mapElement))
 			continue;
 
-		if ((mapElement->properties.path.edges & 0xF) == 0)
-			continue;
-
 		uint8 height = mapElement->base_height;
+
+		uint8 edges = mapElement->properties.path.edges;
+		edges = footpath_clear_provisional_edges(x, y, height, mapElement, edges);
+
+		if ((edges & 0xF) == 0)
+			continue;
 
 		// pathList is a list of elements, set by sub_6A8ACF adjacent to x,y
 		// Spanned from 0x00F3EFA8 to 0x00F3EFC7 (8 elements) in the original
@@ -1801,7 +1830,7 @@ void footpath_update_path_wide_flags(int x, int y)
 		y += 0x20;
 
 		uint8 F3EFA5 = 0;
-		if (mapElement->properties.path.edges & 8) {
+		if (edges & 8) {
 			F3EFA5 |= 0x80;
 			if (pathList[7] != NULL) {
 				if (footpath_element_is_wide(pathList[7])) {
@@ -1810,7 +1839,7 @@ void footpath_update_path_wide_flags(int x, int y)
 			}
 		}
 
-		if (mapElement->properties.path.edges & 1) {
+		if (edges & 1) {
 			F3EFA5 |= 0x2;
 			if (pathList[1] != NULL) {
 				if (footpath_element_is_wide(pathList[1])) {
@@ -1819,7 +1848,7 @@ void footpath_update_path_wide_flags(int x, int y)
 			}
 		}
 
-		if (mapElement->properties.path.edges & 2) {
+		if (edges & 2) {
 			F3EFA5 |= 0x8;
 			if (pathList[3] != NULL) {
 				if (footpath_element_is_wide(pathList[3])) {
@@ -1828,7 +1857,7 @@ void footpath_update_path_wide_flags(int x, int y)
 			}
 		}
 
-		if (mapElement->properties.path.edges & 4) {
+		if (edges & 4) {
 			F3EFA5 |= 0x20;
 			if (pathList[5] != NULL) {
 				if (footpath_element_is_wide(pathList[5])) {
