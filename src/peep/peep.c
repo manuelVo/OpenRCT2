@@ -5175,7 +5175,9 @@ static int peep_update_walking_find_bench(rct_peep* peep){
 
 	if (footpath_element_path_scenery_is_ghost(map_element)) return 0;
 
-	int edges = (map_element->properties.path.edges & 0xF) ^ 0xF;
+	int edges = map_element->properties.path.edges & 0xF;
+	edges = footpath_clear_provisional_edges(peep->next_x, peep->next_y, peep->next_z, map_element, edges);
+	edges ^= 0xF;
 	if (edges == 0) return 0;
 
 	uint8 chosen_edge = scenario_rand() & 0x3;
@@ -5258,7 +5260,9 @@ static int peep_update_walking_find_bin(rct_peep* peep){
 
 	if (footpath_element_path_scenery_is_ghost(map_element)) return 0;
 
-	int edges = (map_element->properties.path.edges & 0xF) ^ 0xF;
+	int edges = map_element->properties.path.edges & 0xF;
+	edges = footpath_clear_provisional_edges(peep->next_x, peep->next_y, peep->next_z, map_element, edges);
+	edges ^= 0xF;
 	if (edges == 0) return 0;
 
 	uint8 chosen_edge = scenario_rand() & 0x3;
@@ -5340,6 +5344,7 @@ static void peep_update_walking_break_scenery(rct_peep* peep){
 	if (footpath_element_path_scenery_is_ghost(map_element))return;
 
 	int edges = map_element->properties.path.edges & 0xF;
+	edges = footpath_clear_provisional_edges(peep->next_x, peep->next_y, peep->next_z, map_element, edges);
 	if (edges == 0xF) return;
 
 	rct_peep* inner_peep;
@@ -5988,7 +5993,7 @@ static int peep_update_patrolling_find_bin(rct_peep* peep){
 	if (footpath_element_path_scenery_is_ghost(map_element))
 		return 0;
 
-	uint8 bin_positions = map_element->properties.path.edges & 0xF;
+	uint8 bin_positions = footpath_clear_provisional_edges(peep->next_x, peep->next_y, peep->next_z, map_element, map_element->properties.path.edges) & 0xF;
 	uint8 bin_quantity = map_element->properties.path.addition_status;
 	uint8 chosen_position = 0;
 
@@ -6330,7 +6335,9 @@ static void peep_update_walking(rct_peep* peep){
 		}
 	}
 
-	int edges = (map_element->properties.path.edges & 0xF) ^ 0xF;
+	int edges = map_element->properties.path.edges & 0xF;
+	edges = footpath_clear_provisional_edges(peep->next_x, peep->next_y, peep->next_z, map_element, edges);
+	edges ^= 0xF;
 	if (edges == 0) return;
 
 	uint8 chosen_edge = scenario_rand() & 0x3;
@@ -8092,7 +8099,7 @@ static int peep_interact_with_path(rct_peep* peep, sint16 x, sint16 y, rct_map_e
 	bool vandalism_present = false;
 	if (footpath_element_has_path_scenery(map_element) &&
 		(map_element->flags & MAP_ELEMENT_FLAG_BROKEN) &&
-		(map_element->properties.path.edges & 0xF) != 0xF){
+		(footpath_clear_provisional_edges(x, y, map_element->base_height, map_element, map_element->properties.path.edges) & 0xF) != 0xF){
 		vandalism_present = 1;
 	}
 
