@@ -842,6 +842,7 @@ static int staff_path_finding_handyman(rct_peep* peep)
 				return 1;
 
 			uint8 pathDirections = (mapElement->properties.path.edges & validDirections) & 0xF;
+			pathDirections = footpath_clear_provisional_edges(peep->next_x, peep->next_y, peep->next_z, mapElement, pathDirections);
 			if (pathDirections == 0) {
 				direction = staff_handyman_direction_rand_surface(peep, validDirections);
 			} else {
@@ -1001,6 +1002,7 @@ static uint8 staff_mechanic_direction_path_rand(rct_peep* peep, uint8 pathDirect
 static uint8 staff_mechanic_direction_path(rct_peep* peep, uint8 validDirections, rct_map_element* pathElement) {
 	uint8 direction = 0xFF;
 	uint8 pathDirections = pathElement->properties.path.edges & 0xF;
+	pathDirections = footpath_clear_provisional_edges(peep->next_x, peep->next_y, peep->next_z, pathElement, pathDirections);
 	if (peep->state != PEEP_STATE_ANSWERING && peep->state != PEEP_STATE_HEADING_TO_INSPECTION) {
 		pathDirections &= validDirections;
 	}
@@ -1141,6 +1143,7 @@ static int staff_path_finding_mechanic(rct_peep* peep) {
 static uint8 staff_direction_path(rct_peep* peep, uint8 validDirections, rct_map_element* pathElement) {
 	uint8 direction = 0xFF;
 	uint8 pathDirections = pathElement->properties.path.edges & 0xF;
+	pathDirections = footpath_clear_provisional_edges(peep->next_x, peep->next_y, peep->next_z, pathElement, pathDirections);
 	if (peep->state != PEEP_STATE_ANSWERING && peep->state != PEEP_STATE_HEADING_TO_INSPECTION) {
 		pathDirections &= validDirections;
 	}
