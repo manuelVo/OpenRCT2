@@ -721,6 +721,14 @@ int footpath_clear_provisional_edges(sint16 x, sint16 y, sint8 z, rct_map_elemen
 					break;
 				}
 			}
+			else if (type == MAP_ELEMENT_TYPE_ENTRANCE || type == MAP_ELEMENT_TYPE_TRACK)
+			{
+				if (edge_z == neighbour->base_height)
+				{
+					neighbour_found = 1;
+					break;
+				}
+			}
 		} while (!map_element_is_last_for_tile(neighbour++));
 
 		if (neighbour_found)
