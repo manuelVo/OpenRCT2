@@ -521,6 +521,11 @@ void staff_update_greyed_patrol_areas()
 	}
 }
 
+static int staff_has_patrol_area(rct_peep *staff)
+{
+	return (gStaffModes[staff->staff_id] & 2) != 0;
+}
+
 static int staff_is_location_in_patrol_area(rct_peep *peep, int x, int y)
 {
 	// Patrol quads are stored in a bit map (8 patrol quads per byte)
@@ -540,7 +545,7 @@ int staff_is_location_in_patrol(rct_peep *staff, int x, int y)
 		return 0;
 
 	// Check if staff has patrol area
-	if (!(gStaffModes[staff->staff_id] & 2))
+	if (!staff_has_patrol_area(staff))
 		return 1;
 
 	return staff_is_location_in_patrol_area(staff, x, y);
@@ -633,6 +638,152 @@ void staff_toggle_patrol_area(int staffIndex, int x, int y)
 	int offset = (x | y) >> 5;
 	int bitIndex = (x | y) & 0x1F;
 	gStaffPatrolAreas[peepOffset + offset] ^= (1 << bitIndex);
+}
+
+/**
+ * Tries to move the staff member to its patrol area
+ *
+ * This is done by picking a random path inside the staff members patrol area
+ * and setting it as destination.
+ */
+static uint8 staff_path_finding_move_to_patrol_area(rct_peep *staff)
+{
+	if (!staff_has_patrol_area(staff))
+		return 0xFF;
+	int peepOffset = staff->staff_id * 128;
+
+	// Count how many bytes have at least one bit set
+	int count = 0;
+	for (int i = 0;i < 128;i++)
+	{
+		if (gStaffPatrolAreas[peepOffset + i] != 0)
+			count++;
+	}
+
+	// Choose one of those bytes
+	int byte_no = scenario_rand_max(count);
+
+	// Retrieve the index of byte no byte_no
+	int byte_index = -1;
+	count = 0;
+	for (int i = 0;i < 128;i++)
+	{
+		if (gStaffPatrolAreas[peepOffset + i] != 0)
+		{
+			if (count == byte_no)
+			{
+				byte_index = i;
+				break;
+			}
+			else
+			{
+				count++;
+			}
+		}
+	}
+	if (byte_index == -1)
+		return 0xFF; // This should never happen
+
+	uint32 byte = gStaffPatrolAreas[peepOffset + byte_index];
+
+	// Count the number of set bits in the byte
+	count = 0;
+	for (int i = 0;i < 32;i++)
+	{
+		if ((byte >> i) & 1)
+			count++;
+	}
+
+	// Choose one of those bits
+	int bit_no = scenario_rand_max(count);
+
+	// Retrieve the index of bit no bit_no
+	int bit_index = -1;
+	count = 0;
+	for (int i = 0;i < 32;i++)
+	{
+		if ((byte >> i) & 1)
+		{
+			if (count == bit_no)
+			{
+				bit_index = i;
+				break;
+			}
+			else
+			{
+				count++;
+			}
+		}
+	}
+	if (bit_index == -1)
+		return 0xFF; // This should never happen
+
+	// Calculate coordinates of the patrol area
+	int start_x, start_y;
+	start_x = ((bit_index | byte_index << 5) & 0x3F) << 7;
+	start_y = ((bit_index | byte_index << 5) & 0xFC0) << 1;
+
+	// Count number of paths in the area
+	count = 0;
+	for (int x = start_x;x < start_x + 128;x += 32)
+	{
+		for (int y = start_y;y < start_y + 128;y += 32)
+		{
+			rct_map_element *map_element = map_get_first_element_at(x / 32,y / 32);
+			do
+			{
+				if (map_element->type == MAP_ELEMENT_TYPE_PATH)
+					count++;
+			} while (!map_element_is_last_for_tile(map_element++));
+		}
+	}
+
+	// If there is no path in this pice of patrol area this search was unsuccessful
+	if (count == 0)
+		return 0xFF;
+
+	// Pick one of the paths
+	int path_no = scenario_rand_max(count);
+
+	// Get the location of chosen path
+	int x, y, z;
+	int element_found = 0;
+	count = 0;
+	for (x = start_x;x < start_x + 128;x += 32)
+	{
+		for (y = start_y;y < start_y + 128;y += 32)
+		{
+			rct_map_element *map_element = map_get_first_element_at(x / 32,y / 32);
+			do
+			{
+				if (map_element->type == MAP_ELEMENT_TYPE_PATH)
+				{
+					if (count == path_no)
+					{
+						z = map_element->base_height;
+						element_found = 1;
+						break;
+					}
+					else
+					{
+						count++;
+					}
+				}
+			} while (!map_element_is_last_for_tile(map_element++));
+			if (element_found)
+				break;
+		}
+		if (element_found)
+			break;
+	}
+
+	gPeepPathFindGoalPosition.x = x;
+	gPeepPathFindGoalPosition.y = y;
+	gPeepPathFindGoalPosition.z = z;
+	gPeepPathFindIgnoreForeignQueues = false;
+	gPeepPathFindQueueRideIndex = 0xFF;
+
+	return peep_pathfind_choose_direction(staff->next_x, staff->next_y, staff->next_z, staff);
 }
 
 /**
@@ -1184,7 +1335,10 @@ static int staff_path_finding_misc(rct_peep* peep) {
 	if (peep->next_var_29 & 0x18) {
 		direction = staff_direction_surface(peep, scenario_rand() & 3);
 	}
-	else {
+	else if (staff_has_patrol_area(peep) && !staff_is_location_in_patrol(peep, peep->next_x, peep->next_y)) {
+		direction = staff_path_finding_move_to_patrol_area(peep);
+	}
+	if (direction == 0xFF) {
 		rct_map_element* pathElement = map_get_path_element_at(peep->next_x / 32, peep->next_y / 32, peep->next_z);
 		if (pathElement == NULL)
 			return 1;
